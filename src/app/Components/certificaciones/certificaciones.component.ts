@@ -13,9 +13,16 @@ import { AuthService } from '../../Service/auth/auth.service';
 import Swal from 'sweetalert2';
 import { MatDialog, MatDialogConfig } from '@angular/material/dialog';
 import { MyModalUpdateComponent } from '../my-modal-update/my-modal-update.component';
+import { Utils } from '../../utils/utils';
+import { image } from 'html2canvas/dist/types/css/types/image';
+
 //import logo_final from '../../../assets/img/logo_final.png';
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
+
+
+
 
 @Component({
   selector: 'app-certificaciones',
@@ -23,7 +30,10 @@ pdfMake.vfs = pdfFonts.pdfMake.vfs;
   styleUrls: ['./certificaciones.component.css']
 })
 export class CertificacionesComponent implements OnInit{
-  
+  logoDataUrl: string;
+
+
+
   donanteLst: Donante[] = [
     new  Donante(1,1,1,"45612144","Renzo Quelopana Pantigoso","Av. Brasil","946588155","correo@correo"),
     new  Donante(1,1,1,"45612144","Walter","Av. Brasil","946588155","correo@correo"),
@@ -79,6 +89,9 @@ export class CertificacionesComponent implements OnInit{
       script.async = true;
      // body.appendChild(script);
       this.renderer.appendChild(body,script)
+
+      Utils.getImageDataUrlFromLocalPath1('/src/assets/img/fondocertificado.png').then(
+        result => this.logoDataUrl = result )
 
   }
 
@@ -248,35 +261,35 @@ export class CertificacionesComponent implements OnInit{
     //     text: 'Hola Mundo'
     //   }]
     // };
-
-    getBase64Image(): string {
-      const canvas = document.createElement('canvas');
-      canvas.width = 200; // Ajusta el ancho del logo según sea necesario
-      canvas.height = 200; // Ajusta la altura del logo según sea necesario
-  
-      const ctx = canvas.getContext('2d');
-      
-      const imgElement = new Image(); // Crear un nuevo elemento de imagen
-      imgElement.onload = () => { // Cuando la imagen esté cargada, dibújala en el lienzo
-        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
-      };
-     // imgElement.src = logo_final; // Utilizar la ruta de la imagen cargada directamente
-      
-      return canvas.toDataURL('image/png');
+    getBase64ImageFromURL(url) {
+      return new Promise((resolve, reject) => {
+        var img = new Image();
+        img.crossOrigin = 'Anonymous'; // Establecer la propiedad crossOrigin
+        img.onload = () => {
+          var canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          var dataURL = canvas.toDataURL(); // Obtener la URL de datos
+          resolve(dataURL);
+        };
+        img.onerror = error => {
+          reject(error);
+        };
+        img.src = url;
+      });
     }
 
-    generateCertificate(donante: Donante) {
+    async generateCertificate(donante: Donante) {
       const data = this.getDataForPDF(donante); // Pasa el donante como argumento
     
       const docDefinition = {
-        content: [],
-        pageOrientation: 'landscape', // Establecer orientación horizontal
-        background: [
-          {
-            image: 'backgroundImage',
-            width: 800 // Ancho de la imagen de fondo
-          }
+        content: [
+         // image: this.logoDataUrl
         ],
+        pageOrientation: 'landscape', // Establecer orientación horizontal
+    
         styles: {
           header: {
             fontSize: 24,
@@ -319,13 +332,19 @@ export class CertificacionesComponent implements OnInit{
           }
         }
       };
-    
-      // Agregar el logo al contenido del documento
-      //docDefinition.content.push({ image: 'logo', style: 'logo' });
-    
+
+      images:{
+        mySuperImage: '/src/assets/img/fondocertificado.png'
+      }
+
+
+     // Agregar la imagen del fondo de certificado al documento
+    //docDefinition.content.push({ image: '../../assets/fondocertificado.png' });
       // Iterar sobre cada donante y agregar su certificado al documento
-      data.forEach((donante, index) => {
+      data.forEach(async (donante, index) => {
         const certificateContent = [
+          //{image: await this.getBase64ImageFromURL("../../assets/fondocertificado.png")},
+          
           { text: 'CERTIFICADO DE AGRADECIMIENTO', style: 'header' },
           { text: 'La Asociación "Alimenta y Comparte"', style: 'subheader' },
           { text: 'expresa su más sincero agradecimiento a:', style: 'paragraph' },
@@ -339,6 +358,7 @@ export class CertificacionesComponent implements OnInit{
     
         // Agregar el certificado al contenido del documento
         if (index !== 0) {
+          //docDefinition.content.push({ image: await this.getBase64ImageFromURL("../../assets/fondocertificado.png") });
           docDefinition.content.push({ text: '\n\n' }); // Agregar espacio entre certificados
         }
         docDefinition.content.push(certificateContent);
@@ -347,16 +367,7 @@ export class CertificacionesComponent implements OnInit{
       pdfMake.createPdf(docDefinition).download();
     }
     
-    
-    
-    
-   
-    
-     
+      
     }
     
-
-  
-  
-  //}
 
